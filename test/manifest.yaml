@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bad-deployment
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bad-app
+  template:
+    metadata:
+      labels:
+        app: bad-app
+    spec:
+      containers:
+        - name: app
+          image: nginx:latest
+          # Intentionally missing:
+          #   resources (requests/limits)  → WARNING  container-resources
+          #   readinessProbe/livenessProbe → WARNING  pod-probes
+          #   securityContext              → WARNING  container-security-context
+          # nginx:latest tag              → CRITICAL container-image-tag
+      # Deployment-level missing:
+      #   PodDisruptionBudget            → WARNING  deployment-has-poddisruptionbudget
+      #   pod anti-affinity              → WARNING  deployment-has-host-podantiaffinity
+      #   NetworkPolicy                  → WARNING  pod-networkpolicy

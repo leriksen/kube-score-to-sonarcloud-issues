@@ -26,6 +26,7 @@
           name: .name,
           description: (.comment // .name),
           engineId: "kube-score",
+          cleanCodeAttribute: "CONVENTIONAL",
           type: "CODE_SMELL",
           severity: (if $minGrade == 1 then "CRITICAL" else "MAJOR" end)
         }

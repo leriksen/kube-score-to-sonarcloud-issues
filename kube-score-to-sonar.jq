@@ -3,12 +3,20 @@
 # Usage:
 #   jq -f kube-score-to-sonar.jq kube-score-report.json > sonar-issues.json
 #
-# For AZDO pipelines, strip the absolute path prefix from file_name by setting
-# the KUBE_SCORE_PATH_PREFIX environment variable before running:
-#   export KUBE_SCORE_PATH_PREFIX="$(Build.SourcesDirectory)/"
-#   jq -f kube-score-to-sonar.jq kube-score-report.json > sonar-issues.json
+# Environment variables (set before running jq):
+#
+#   KUBE_SCORE_PATH_PREFIX  — strip this prefix from file_name (e.g. an absolute path root)
+#     export KUBE_SCORE_PATH_PREFIX="$(Build.SourcesDirectory)/"
+#
+#   KUBE_SCORE_PATH_PREPEND — prepend this to every filePath after stripping (e.g. a subdirectory)
+#     export KUBE_SCORE_PATH_PREPEND="deployment/"
+#
+# Both are optional and independent. A common AZDO pattern when kube-score runs inside
+# a subdirectory called "deployment" but SonarCloud analyzes from the repo root:
+#   export KUBE_SCORE_PATH_PREPEND="deployment/"
 
-($ENV.KUBE_SCORE_PATH_PREFIX // "") as $pathPrefix
+($ENV.KUBE_SCORE_PATH_PREFIX  // "") as $pathPrefix
+| ($ENV.KUBE_SCORE_PATH_PREPEND // "") as $pathPrepend
 | . as $input
 | (
     [
@@ -48,7 +56,7 @@
             {
               ruleId: $check.check.id,
               primaryLocation: (
-                { message: $check.check.name, filePath: ($obj.file_name | ltrimstr($pathPrefix)) }
+                { message: $check.check.name, filePath: ($pathPrepend + ($obj.file_name | ltrimstr($pathPrefix))) }
                 + (if $obj.file_row > 0 then { textRange: { startLine: $obj.file_row } } else {} end)
               )
             }
@@ -63,7 +71,7 @@
                   primaryLocation: (
                     {
                       message: (if ($c.path // "") != "" then "\($c.path): \($detail)" else $detail end),
-                      filePath: ($obj.file_name | ltrimstr($pathPrefix))
+                      filePath: ($pathPrepend + ($obj.file_name | ltrimstr($pathPrefix)))
                     }
                     + (if $obj.file_row > 0 then { textRange: { startLine: $obj.file_row } } else {} end)
                   )

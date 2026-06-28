@@ -15,6 +15,11 @@
 # a subdirectory called "deployment" but SonarCloud analyzes from the repo root:
 #   export KUBE_SCORE_PATH_PREPEND="deployment/"
 
+def path_join(prepend; suffix):
+  [(prepend | rtrimstr("/")), (suffix | ltrimstr("/"))]
+  | map(select(length > 0))
+  | join("/");
+
 ($ENV.KUBE_SCORE_PATH_PREFIX  // "") as $pathPrefix
 | ($ENV.KUBE_SCORE_PATH_PREPEND // "") as $pathPrepend
 | . as $input
@@ -56,7 +61,7 @@
             {
               ruleId: $check.check.id,
               primaryLocation: (
-                { message: $check.check.name, filePath: ($pathPrepend + ($obj.file_name | ltrimstr($pathPrefix))) }
+                { message: $check.check.name, filePath: path_join($pathPrepend; ($obj.file_name | ltrimstr($pathPrefix))) }
                 + (if $obj.file_row > 0 then { textRange: { startLine: $obj.file_row } } else {} end)
               )
             }
@@ -71,7 +76,7 @@
                   primaryLocation: (
                     {
                       message: (if ($c.path // "") != "" then "\($c.path): \($detail)" else $detail end),
-                      filePath: ($pathPrepend + ($obj.file_name | ltrimstr($pathPrefix)))
+                      filePath: path_join($pathPrepend; ($obj.file_name | ltrimstr($pathPrefix)))
                     }
                     + (if $obj.file_row > 0 then { textRange: { startLine: $obj.file_row } } else {} end)
                   )
